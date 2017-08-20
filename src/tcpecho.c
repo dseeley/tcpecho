@@ -181,7 +181,7 @@ int main (int argc, char *argv[])
                 {
                     if ((numbytes = recv(connected_fd, recv_buff, MAX_RECV_BUFF_SIZE - 1, 0)) == -1)
                     {
-                        fprintf(stderr, "recv failure [%i] [%i]\n", connected_fd, recv_buff);
+                        fprintf(stderr, "recv failure [%i] [%s]\n", connected_fd, recv_buff);
                         syslog(LOG_CRIT, "recv failure");
                         exit(EXIT_FAILURE);
                     }
