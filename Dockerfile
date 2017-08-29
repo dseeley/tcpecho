@@ -1,14 +1,12 @@
 FROM gcr.io/google_containers/ubuntu-slim-amd64:0.14
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+  ca-certificates \
+  git \
   build-essential
 
-RUN mkdir -p tcpecho
+RUN git clone https://github.com/dseeley/tcpecho.git ; cd tcpecho ; make
 
 EXPOSE 3495
-
-COPY src /tcpecho/src
-COPY Makefile /tcpecho/Makefile
-RUN cd tcpecho ; make
 
 ENTRYPOINT ["/tcpecho/bin/tcpecho", "3495"]
