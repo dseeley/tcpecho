@@ -168,7 +168,10 @@ int main (int argc, char *argv[])
             inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), remote_ip, sizeof remote_ip);
             syslog(LOG_INFO, "accepted from %s", remote_ip);
             printf("server: accepted from %s\n", remote_ip);
-            my_socket_send(connected_fd, "Socket connected.\n", MSG_EOR);
+            
+            char socket_connected_txt[MAX_SEND_BUFF_SIZE] = {0};
+            snprintf(socket_connected_txt, MAX_SEND_BUFF_SIZE, "Socket connected to %s. Echoing...\n", remote_ip);
+            my_socket_send(connected_fd, socket_connected_txt, MSG_EOR);
 
             /*Create a child process to talk to each client*/
             if (!fork())
