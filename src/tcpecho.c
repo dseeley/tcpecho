@@ -200,54 +200,63 @@ int main (int argc, char *argv[])
         }
         else
         {
-            inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), remote_ip, sizeof remote_ip);
-            syslog(LOG_INFO, "accepted from %s", remote_ip);
-            printf("server: accepted from %s\n", remote_ip);
-            
-            getgatewayandiface(gateway_address, interface);
-            get_ip_for_interface(interface, default_ip);
-
-            char socket_connected_txt[MAX_SEND_BUFF_SIZE] = {0};
-            snprintf(socket_connected_txt, MAX_SEND_BUFF_SIZE, "Socket connected to %s. Echoing...\n", default_ip);
-            my_socket_send(connected_fd, socket_connected_txt, MSG_EOR);
-
-            /*Create a child process to talk to each client*/
-            if (!fork())
+            /*Check whether socket is still open.  A health-check (for example) will open it then (almost) immediately close it.*/
+            usleep(250*1000);       //ms
+            if (send(connected_fd, "", 0, MSG_NOSIGNAL) == -1)
             {
-                int numbytes = 0;
-                char recv_buff[MAX_RECV_BUFF_SIZE] = {0};
-
-                close(sock_fd);     // child doesn't need the socket listener
-
-                while (1)
-                {
-                    memset(recv_buff, 0, sizeof(recv_buff));
-                    *recv_buff = '\0';
-                    if ((numbytes = recv(connected_fd, recv_buff, MAX_RECV_BUFF_SIZE - 1, 0)) == -1)
-                    {
-                        fprintf(stderr, "recv failure [%i] [%s]\n", connected_fd, recv_buff);
-                        syslog(LOG_CRIT, "recv failure");
-                        exit(EXIT_FAILURE);
-                    }
-                
-                    if (strcmp(recv_buff, "quit") == 0 || strcmp(recv_buff, "bye") == 0 || strcmp(recv_buff, "exit") == 0)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        char send_buff_max[MAX_SEND_BUFF_SIZE] = {0};
-                        *send_buff_max = '\0';
-                        snprintf(send_buff_max, MAX_SEND_BUFF_SIZE, "%s", recv_buff);
-                        my_socket_send(connected_fd, send_buff_max, MSG_EOR);
-                    }
-                }
-                
-                my_socket_send(connected_fd, "Disconnected from server\n", MSG_EOR);
-                printf("server: Disconnected from %s\n", remote_ip);
-
                 close(connected_fd);
-                exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), remote_ip, sizeof remote_ip);
+                syslog(LOG_INFO, "accepted from %s", remote_ip);
+                printf("server: accepted from %s\n", remote_ip);
+                
+                getgatewayandiface(gateway_address, interface);
+                get_ip_for_interface(interface, default_ip);
+
+                char socket_connected_txt[MAX_SEND_BUFF_SIZE] = {0};
+                snprintf(socket_connected_txt, MAX_SEND_BUFF_SIZE, "Socket connected to %s. Echoing...\n", default_ip);
+                my_socket_send(connected_fd, socket_connected_txt, MSG_EOR);
+
+                /*Create a child process to talk to each client*/
+                if (!fork())
+                {
+                    int numbytes = 0;
+                    char recv_buff[MAX_RECV_BUFF_SIZE] = {0};
+
+                    close(sock_fd);     // child doesn't need the socket listener
+
+                    while (1)
+                    {
+                        memset(recv_buff, 0, sizeof(recv_buff));
+                        *recv_buff = '\0';
+                        if ((numbytes = recv(connected_fd, recv_buff, MAX_RECV_BUFF_SIZE - 1, 0)) == -1)
+                        {
+                            fprintf(stderr, "recv failure from %s.  Closing.\n", remote_ip);
+                            syslog(LOG_CRIT, "recv failure");
+                            exit(EXIT_FAILURE);
+                        }
+                    
+                        if (strcmp(recv_buff, "quit") == 0 || strcmp(recv_buff, "bye") == 0 || strcmp(recv_buff, "exit") == 0)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            char send_buff_max[MAX_SEND_BUFF_SIZE] = {0};
+                            *send_buff_max = '\0';
+                            snprintf(send_buff_max, MAX_SEND_BUFF_SIZE, "%s", recv_buff);
+                            my_socket_send(connected_fd, send_buff_max, MSG_EOR);
+                        }
+                    }
+                    
+                    my_socket_send(connected_fd, "Disconnected from server\n", MSG_EOR);
+                    printf("server: Disconnected from %s\n", remote_ip);
+
+                    close(connected_fd);
+                    exit(EXIT_SUCCESS);
+                }
             }
         }
 
