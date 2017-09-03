@@ -22,6 +22,10 @@
 #include <signal.h>
 #include <syslog.h>
 
+//Specifically for get_ip_for_interface
+#include <sys/ioctl.h>
+#include <net/if.h>
+
 
 #define BACKLOG 10     // how many pending connections queue will hold
 
@@ -32,8 +36,38 @@
 #define SYSLOGID "tcpecho"
 #endif
 
+int getgatewayandiface(char *, char *);
 
 static void terminate_server ();
+
+
+/**
+  @brief get first IP for an interface
+  @param const char *interface, char *default_ip
+  @return 0
+ */
+static int get_ip_for_interface(const char *interface, char *default_ip)
+{
+    int fd;
+    struct ifreq ifr;
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    /* I want to get an IPv4 IP address */
+    ifr.ifr_addr.sa_family = AF_INET;
+
+    /* I want an IP address attached to 'interface' */
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ-1);
+
+    ioctl(fd, SIOCGIFADDR, &ifr);
+
+    close(fd);
+
+    /* Display result */
+    strcpy(default_ip, inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+
+    return 0;
+}
 
 
 /**
@@ -90,6 +124,7 @@ int main (int argc, char *argv[])
     char remote_ip[INET6_ADDRSTRLEN];
     int getaddrinfo_retval;
     char local_ip[INET6_ADDRSTRLEN];
+    char    gateway_address[INET_ADDRSTRLEN], interface[IF_NAMESIZE], default_ip[INET6_ADDRSTRLEN];
 
     if (argc < 2) 
     {
@@ -169,8 +204,11 @@ int main (int argc, char *argv[])
             syslog(LOG_INFO, "accepted from %s", remote_ip);
             printf("server: accepted from %s\n", remote_ip);
             
+            getgatewayandiface(gateway_address, interface);
+            get_ip_for_interface(interface, default_ip);
+
             char socket_connected_txt[MAX_SEND_BUFF_SIZE] = {0};
-            snprintf(socket_connected_txt, MAX_SEND_BUFF_SIZE, "Socket connected to %s. Echoing...\n", remote_ip);
+            snprintf(socket_connected_txt, MAX_SEND_BUFF_SIZE, "Socket connected to %s. Echoing...\n", default_ip);
             my_socket_send(connected_fd, socket_connected_txt, MSG_EOR);
 
             /*Create a child process to talk to each client*/
@@ -183,6 +221,8 @@ int main (int argc, char *argv[])
 
                 while (1)
                 {
+                    memset(recv_buff, 0, sizeof(recv_buff));
+                    *recv_buff = '\0';
                     if ((numbytes = recv(connected_fd, recv_buff, MAX_RECV_BUFF_SIZE - 1, 0)) == -1)
                     {
                         fprintf(stderr, "recv failure [%i] [%s]\n", connected_fd, recv_buff);
@@ -197,6 +237,7 @@ int main (int argc, char *argv[])
                     else
                     {
                         char send_buff_max[MAX_SEND_BUFF_SIZE] = {0};
+                        *send_buff_max = '\0';
                         snprintf(send_buff_max, MAX_SEND_BUFF_SIZE, "%s", recv_buff);
                         my_socket_send(connected_fd, send_buff_max, MSG_EOR);
                     }
