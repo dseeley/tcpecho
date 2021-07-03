@@ -4,9 +4,9 @@ A simple, threaded TCP echo server.  Repeats back to you what you write.
 Available as image on dockerhub:  https://hub.docker.com/repository/docker/dseeley/tcpecho
 
 ## Prerequisites:
-+ c
-+ gnu make
-+ docker
++ gcc and gnu make
+  + `apt-get install -y gcc libc6-dev make`
++ docker (if making docker image) 
 
 ## Build
 c-compile
@@ -16,12 +16,24 @@ c-compile
 ## Run locally (on `portnum`)
 + ` bin/tcpecho <portnum>`
 
-### Or run in docker (on `SRV_PORT`):
-+ `docker run -d --name tcpecho -e SRV_PORT=3495 dseeley/tcpecho:1.0.0`
+## Docker
 
-## Create Docker image
-Builds a docker image and pushes to DockerHub with the tag `latest`, and the (optional) `TAG`.
-+ `[TAG=0.0.1] make dockerpush`
+### Create docker image
+Builds a docker image with the tag `latest`, and the (optional) `TAG` version.
+```bash
+[TAG=0.0.1] make dockerbuild
+```
 
-## k8s
-A sample deployment and service manifest are included for reference.
+### Create docker image and push to dockerhub
+Builds a docker image and pushes to DockerHub with the tag `latest`, and the (optional) `TAG` version.
+```bash
+[TAG=0.0.1] make dockerpush
+```
+
+### Run in docker (on `SRV_PORT`):
+```bash
+docker run -d --name tcpecho -e SRV_PORT=3495 dseeley/tcpecho:latest
+```
+
+### Run in k8s
+Also bundled a deployment and service manifests for reference.
