@@ -1,0 +1,16 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: tcpecho
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: tcpecho
+    spec:
+      containers:
+      - name: tcpecho
+        image: dseeley/tcpecho:1.0.0
+        ports:
+        - containerPort: 3495
