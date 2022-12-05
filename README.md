@@ -32,7 +32,7 @@ Builds a docker image and pushes to DockerHub with the tag `latest`, and the (op
 
 ### Run in docker (on `SRV_PORT`):
 ```bash
-docker run -d --name tcpecho -e SRV_PORT=3495 dseeley/tcpecho:latest
+docker run -d --name tcpecho -e SRV_PORT=3495 -p 3495:3495 dseeley/tcpecho:latest
 ```
 
 ### Run in k8s
